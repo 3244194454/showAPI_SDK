@@ -216,8 +216,12 @@ public class NormalRequest   {
 	/**
 	 * 添加head头的字符串参数
 	 */
-	public NormalRequest addHeadPara(String key,String value) {
-		this.headMap.put(key,value);
+	public NormalRequest addHeadPara(String key,Object value) {
+		if(value!=null){
+			this.headMap.put(key,value.toString());
+		}else {
+			this.headMap.put(key,"");
+		}
 		return this;
 	}
 
