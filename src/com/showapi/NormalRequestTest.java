@@ -8,47 +8,29 @@ import java.io.IOException;
 public class NormalRequestTest {
 
     public static void main(String argv[]) throws IOException {
-        String responseData=new NormalRequest("https://www.showapi.com")//发生https请求
-//                .addHeadPara("head-key","head-value")//设置头部
-                .addHeads("Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8\n" +
-                        "Accept-Encoding: gzip, deflate, br\n" +
-                        "Accept-Language: zh-CN,zh;q=0.9\n" +
-                        "Cache-Control: no-cache\n" +
-                        "Connection: keep-alive\n" +
-                        "Cookie: UM_distinctid=16720635b1da6b-026bab......423758-1542432509-%7C1542444516\n" +
-                        "Host: www.showapi.com\n" +
-                        "Pragma: no-cache\n" +
-                        "Referer: https://www.showapi.com/\n" +
-                        "Upgrade-Insecure-Requests: 1\n" +
-                        "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.67 Safari/537.36")//批量设置头部
-                .addTextPara("myname","showapi.com")//请求参数一
-//                .addFilePara("fileImg",new File("d:\\123.jpg")) //上传文件时,使用该方法
-//                .postAsByte()//发送post请求,返回byte数组,同理可以使用getAsByte()方法
-                .get();//发送post请求,返回字符串,同理可以使用post()方法
-        System.out.println(responseData);
 
-        //请求万维易源showapi.com上的接口
-        String appId = "1234";//接口调用的应用ID
-        String appSecret = "5711c3......e613a2";//接口调用的秘钥
-        String res=new ShowApiRequest("http://route.showapi.com/64-19","appId","appSecret")
-//                .addHeadPara("head-key","head-value")//设置头部
-                .addHeads("Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8\n" +
+        String res = new NormalRequest("https://mngdslfhkasdf34a987sdfa.showapi.com/stat/apiInvokeStat")
+                .addHeads("Accept: application/json, text/javascript, */*; q=0.01\n" +
                         "Accept-Encoding: gzip, deflate, br\n" +
                         "Accept-Language: zh-CN,zh;q=0.9\n" +
                         "Cache-Control: no-cache\n" +
                         "Connection: keep-alive\n" +
-                        "Cookie: UM_distinctid=16720635b1da6b-026bab......423758-1542432509-%7C1542444516\n" +
-                        "Host: www.showapi.com\n" +
+                        "Content-Length: 33\n" +
+                        "Content-Type: application/x-www-form-urlencoded; charset=UTF-8\n" +
+                        "Cookie: UM_distinctid=16d4d799b49d18-0915fd72e8da7b-5373e62-1fa400-16d4d799b4ab63; auth=af0dahsLIpXZZv5rHUZxXVLf4yHUXCTL5OhEA8Udeh4/pKfqDXftc5fM5d6QSKuWwoX3HwbTePLlTEw; Hm_lvt_2b8b8260aa5e70de7faf1de4f9221ee0=1574393118,1574433267,1574495336,1574653403; Hm_lpvt_2b8b8260aa5e70de7faf1de4f9221ee0=1574653403; JSESSIONID=88524EB176512F19738CB3CA5E4FFD59; showApiAuth=R49OfEwTUjxU4Vow6WGUiEyb-rgZ9SEg9vd5CjtTas2JRZUvyBWRWRhVvKqR0UgptFEp-dJLimg\n" +
+                        "Host: mngdslfhkasdf34a987sdfa.showapi.com\n" +
+                        "Origin: https://mngdslfhkasdf34a987sdfa.showapi.com\n" +
                         "Pragma: no-cache\n" +
-                        "Referer: https://www.showapi.com/\n" +
-                        "Upgrade-Insecure-Requests: 1\n" +
-                        "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.67 Safari/537.36")//批量设置头部
-                .addTextPara("com","zhongtong")//请求参数一,具体参数参考接口文档
-                .addTextPara("nu","632671345422")//请求参数二
-//                .addFilePara("file",new File("d:\\123.txt")) //上传文件时,使用该方法
-//                .postAsByte()//发送post请求,返回byte数组,同理可以使用getAsByte()方法
-                .post();//发送post请求,返回字符串,同理可以使用get()方法
+                        "Referer: https://mngdslfhkasdf34a987sdfa.showapi.com/stat/apiInvoke\n" +
+                        "Sec-Fetch-Mode: cors\n" +
+                        "Sec-Fetch-Site: same-origin\n" +
+                        "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36\n" +
+                        "X-Requested-With: XMLHttpRequest")
+                .addTextPara("type","0")
+                .addTextPara("options","1")
+                .post();
         System.out.println(res);
+
 
     }
 }
