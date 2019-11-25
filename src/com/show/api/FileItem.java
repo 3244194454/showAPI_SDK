@@ -77,26 +77,31 @@ public class FileItem {
 	public byte[] getContent() throws IOException {
 		if (this.content == null && this.file != null && this.file.exists()) {
 			InputStream in = null;
-			ByteArrayOutputStream out = null;
-
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			try {
+				byte[] tempbytes = new byte[1024];
+				int byteread = 0;
 				in = new FileInputStream(this.file);
-				out = new ByteArrayOutputStream();
-				int ch;
-				while ((ch = in.read()) != -1) {
-					out.write(ch);
+				// 读入多个字节到字节数组中，byteread为一次读入的字节数
+				while ((byteread = in.read(tempbytes)) != -1) {
+					out.write(tempbytes, 0, byteread);
 				}
 				this.content = out.toByteArray();
+			} catch (Exception e1) {
+				e1.printStackTrace();
 			} finally {
-				if (out != null) {
-					out.close();
-				}
 				if (in != null) {
-					in.close();
+					try {
+						in.close();
+						out.close();
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
 				}
 			}
+
+
 		}
 		return this.content;
 	}
-
 }

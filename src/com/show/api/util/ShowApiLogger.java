@@ -8,10 +8,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+//import org.apache.commons.logging.Log;
+//import org.apache.commons.logging.LogFactory;
 
 import com.show.api.Constants;
+import sun.rmi.runtime.Log;
 
 /**
  * 客户端日志
@@ -19,7 +20,7 @@ import com.show.api.Constants;
  */
 public class ShowApiLogger {
 
-	private static final Log log = LogFactory.getLog("showapi.log");
+//	private static final Log log = LogFactory.getLog("showapi.log");
 	private static boolean needEnableLogger = true;
 	public static void setNeedEnableLogger(boolean needEnableLogger) {
 		ShowApiLogger.needEnableLogger = needEnableLogger;
@@ -52,7 +53,7 @@ public class ShowApiLogger {
 		sb.append("_");
 		sb.append((e.getMessage() + "").replaceAll("\r\n", " "));
 		sb.append(bodyContent);
-		log.error(sb.toString());
+//		log.error(sb.toString());
 	}
 
  

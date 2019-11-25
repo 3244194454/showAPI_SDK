@@ -33,8 +33,8 @@ import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
 import javax.xml.validation.Validator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+//import org.apache.commons.logging.Log;
+//import org.apache.commons.logging.LogFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -42,13 +42,14 @@ import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
+import sun.rmi.runtime.Log;
 
 /**
  * Encapsulating XML common operations.
  */
 public final class XmlUtils {
 
-	private static final Log log = LogFactory.getLog(XmlUtils.class);
+//	private static final Log log = LogFactory.getLog(XmlUtils.class);
 
 	private static final String XMLNS_XSI = "xmlns:xsi";
 	private static final String XSI_SCHEMA_LOCATION = "xsi:schemaLocation";
@@ -319,7 +320,7 @@ public final class XmlUtils {
 	/**
 	 * Gets the text value of current element.
 	 * 
-	 * @param parent the current element
+	 *
 	 * @return text value of the element, NULL if element not exists
 	 */
 	public static String getElementValue(Element element) {
@@ -580,9 +581,9 @@ public final class XmlUtils {
 			Validator validator = schema.newValidator();
 			validator.validate(new DOMSource(root));
 		} catch (SAXException e) {
-			if (log.isErrorEnabled()) {
-				log.error("验证XML文件出错：\n" + nodeToString(root));
-			}
+//			if (log.isErrorEnabled()) {
+//				log.error("验证XML文件出错：\n" + nodeToString(root));
+//			}
 			throw new Exception("XML_VALIDATE_ERROR", e);
 		} catch (Exception e) {
 			throw new Exception("XML_READ_ERROR", e);

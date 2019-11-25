@@ -128,7 +128,7 @@ public   class ZipUtils {
 				output = new FileOutputStream(file);
 				copy(conn.getInputStream(), output);
 			} else {
-				String rsp = WebUtils.getResponseAsString(conn);
+				String rsp = WebUtils.getResponseAsString(conn,0);
 				throw new Exception(rsp);
 			}
 		} catch (IOException e) {
@@ -163,7 +163,7 @@ public   class ZipUtils {
 				output = new FileOutputStream(file);
 				copy(conn.getInputStream(), output);
 			} else {
-				String rsp = WebUtils.getResponseAsString(conn);
+				String rsp = WebUtils.getResponseAsString(conn,0);
 				throw new Exception(rsp);
 			}
 		} catch (IOException e) {

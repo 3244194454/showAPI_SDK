@@ -1,12 +1,6 @@
 package com.show.api.util;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.Reader;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.Proxy;
 import java.net.URL;
@@ -31,15 +25,13 @@ import javax.net.ssl.X509TrustManager;
 
 import com.show.api.FileItem;
 import com.show.api.NormalRequest;
+import com.show.api.ShowApiRequest;
 
 /**
  * 网络工具类。
  */
 public   class WebUtils {
 
-	private static final String METHOD_LIST = "LIST";
-//	private static final String METHOD_POST = "POST";
-//	private static final String METHOD_POST = "POST";
 	private static final String METHOD_POST = "POST";
 	private static final String METHOD_GET = "GET";
 
@@ -82,195 +74,92 @@ public   class WebUtils {
 		public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
 		}
 	}
-	
-	
-	
-	public static ResData _doGetAsByte(NormalRequest req) throws IOException {
-		HttpURLConnection conn = null;
-		byte[] rsp = null;
-		ResData res=new ResData();
-		try {
-			String ctype = "application/x-www-form-urlencoded;charset=" + req.getCharset();
-			String query = buildQuery(req.getTextMap() ,req.getCharset()  );
-			try {
-				conn = getConnection(buildGetUrl(req.getUrl(), query), METHOD_GET, ctype,req);
-				conn.setConnectTimeout(req.getConnectTimeout());
-				conn.setReadTimeout(req.getReadTimeout());
-			} catch (IOException e) {
-				ShowApiLogger.logCommError(e, req.getUrl(), req.getTextMap().get("showapi_app_id"),  req.getTextMap());
-				throw e;
-			}
 
-			try {
-				Map res_headMap=conn.getHeaderFields();
-				rsp = getResponseAsByte(conn);
-				req.setRes_headtMap(res_headMap); //设置返回头
-			} catch (IOException e) {
-				ShowApiLogger.logCommError(e, req.getUrl(), req.getTextMap().get("showapi_app_id"),  req.getTextMap());
-				throw e;
-			}
-		} finally {
-			if (conn != null) {
-				conn.disconnect();
-			}
-		}
-		res.setResData(rsp);
-		res.setRes_maybe_encoding(getResponseCharset(conn.getContentType()));
-		return res;
-	}
-	
-	public static ResData _doPostAsByte(NormalRequest req) throws IOException {
-		ResData res=new ResData();
-		byte[] rsp = null;
+	public static ResData _do_execute(NormalRequest req,String method) throws IOException {
 		HttpURLConnection conn = null;
 		OutputStream out = null;
-		if(req.getBody()!=null){//直接提交json或二进制流
-			String ctype = "application/octet-stream;charset=" +req.getCharset();
-			try {
-				try {
-					conn = getConnection(new URL(req.getUrl()), METHOD_POST, ctype, req );
-					conn.setConnectTimeout(req.getConnectTimeout());
-					conn.setReadTimeout(req.getReadTimeout());
-					out = conn.getOutputStream();
-					out.write(req.getBody());
-					out.flush();
-					
-					Map res_headMap=conn.getHeaderFields();
-					rsp = getResponseAsByte(conn);
-					req.setRes_headtMap(res_headMap); //设置返回头
-				} catch (IOException e) {
-					ShowApiLogger.logCommError(e, req.getUrl(), req.getTextMap().get("showapi_app_id"), new HashMap<String, String>());
-					throw e;
-				}
-			} finally {
-				if (out != null) {
-					out.close();
-				}
-				if (conn != null) {
-					conn.disconnect();
-				}
-			}
-			
-		}else if(req.getBodyString()!=null){//直接提交body字符串
-			String ctype = "application/octet-stream;charset=" +req.getCharset();
-			try {
-				try {
-					conn = getConnection(new URL(req.getUrl()), METHOD_POST, ctype, req );
-					conn.setConnectTimeout(req.getConnectTimeout());
-					conn.setReadTimeout(req.getReadTimeout());
-					out = conn.getOutputStream();
-					out.write( req.getBodyString().getBytes(req.getCharset()) );
-					out.flush();
-					
-					Map res_headMap=conn.getHeaderFields();
-					rsp = getResponseAsByte(conn);
-					req.setRes_headtMap(res_headMap); //设置返回头
-				} catch (IOException e) {
-					ShowApiLogger.logCommError(e, req.getUrl(), req.getTextMap().get("showapi_app_id"), new HashMap<String, String>());
-					throw e;
-				}
-			} finally {
-				if (out != null) {
-					out.close();
-				}
-				if (conn != null) {
-					conn.disconnect();
-				}
-			}
-			
-		}else{//普通表单提交
-			String ctype = "application/x-www-form-urlencoded;charset=" +req.getCharset();
-			String query = buildQuery(req.getTextMap() ,req.getCharset());
-			byte[] content = null;
-			if (query != null) {
-				content = query.getBytes(req.getCharset());
+		byte[] rsp = null;
+		byte[] body = new byte[0];
+		ResData res=new ResData();
+		String ctype="" ,query="",boundary="";
+
+		String charset= req.getCharset();
+		if(method.equals(METHOD_GET)){
+			ctype = "application/x-www-form-urlencoded;charset=" + charset;
+			query = buildQuery(req.getTextMap() ,charset  );
+
+		}else if(method.equals(METHOD_POST)){
+			boolean upload=false;
+			if(req.getUploadMap()!=null && req.getUploadMap().size()>0){
+				boundary = String.valueOf(System.nanoTime()); // 随机分隔线
+				ctype = "multipart/form-data;charset=" + charset + ";boundary=" + boundary;
+				upload=true;
 			}else{
-				content = "".getBytes(req.getCharset());
+				ctype = "application/x-www-form-urlencoded;charset=" + charset;
+				ctype=getCtype(req,ctype);
 			}
-			try {
-				try {
-					conn = getConnection(new URL(req.getUrl()), METHOD_POST, ctype, req );
-					conn.setConnectTimeout(req.getConnectTimeout());
-					conn.setReadTimeout(req.getReadTimeout());
-					out = conn.getOutputStream();
-					out.write(content);
-					
-					Map res_headMap=conn.getHeaderFields();
-					rsp = getResponseAsByte(conn);
-					req.setRes_headtMap(res_headMap); //设置返回头
-				} catch (IOException e) {
-					ShowApiLogger.logCommError(e, req.getUrl(), req.getTextMap().get("showapi_app_id"),  query);
-					throw e;
-				}
-			} finally {
-				if (out != null) {
-					out.close();
-				}
-				if (conn != null) {
-					conn.disconnect();
+			if(req.getBody()!=null){
+				body=req.getBody();
+			}else if(req.getBodyString()!=null){
+				body=req.getBodyString().getBytes(charset);
+			}else{//表单字段
+				if(upload){
+					ByteArrayOutputStream bout=new ByteArrayOutputStream();
+					byte[] entryBoundaryBytes = ("\r\n--" + boundary + "\r\n").getBytes(charset);
+					// 组装文本请求参数
+					Set<Entry<String, String>> textEntrySet =  req.getTextMap().entrySet();
+					for (Entry<String, String> textEntry : textEntrySet) {
+						byte[] textBytes = getTextEntry(textEntry.getKey(), textEntry.getValue(), charset);
+						bout.write(entryBoundaryBytes);
+						bout.write(textBytes);
+					}
+
+					// 组装文件请求参数
+					Set<Entry<String, File>> fileEntrySet = req.getUploadMap().entrySet();
+					for (Entry<String, File> fileEntry : fileEntrySet) {
+						File f=fileEntry.getValue();
+						FileItem fileItem = new FileItem(f);
+						if (fileItem.getContent() == null) {
+							continue;
+						}
+						byte[] fileBytes = getFileEntry(fileEntry.getKey(), fileItem.getFileName(), fileItem.getMimeType(), charset);
+						bout.write(entryBoundaryBytes);
+						bout.write(fileBytes);
+						bout.write(fileItem.getContent());
+					}
+
+					// 添加请求结束标志 ,最后加上2个--
+					byte[] endBoundaryBytes = ("\r\n--" + boundary + "--\r\n").getBytes(charset);
+					bout.write(endBoundaryBytes);
+					body=bout.toByteArray();
+					System.out.println(new String(body));
+				}else{
+
+					String body_content = buildQuery(req.getTextMap() ,charset  );
+					if(body_content!=null){
+//						System.out.println(req.getTextMap());
+						body=body_content.getBytes(charset  );
+					}
 				}
 			}
 		}
-		res.setResData(rsp);
-		res.setRes_maybe_encoding(getResponseCharset(conn.getContentType()));
-		return res;
-	}
-	private static ResData _doPostWithFileAsByte(NormalRequest req) throws IOException {
-		String boundary = String.valueOf(System.nanoTime()); // 随机分隔线
-		HttpURLConnection conn = null;
-		OutputStream out = null;
-		byte[] rsp = null;
-		ResData res=new ResData();
+
+		//整体统一提交
+		URL url=buildGetUrl(req.getUrl(), query);
 		try {
-			StringBuilder strBody=new StringBuilder();//仅仅用于日志
-			try {
-				String ctype = "multipart/form-data;charset=" + req.getCharset() + ";boundary=" + boundary;
-				conn = getConnection(new URL(req.getUrl()), METHOD_POST, ctype, req );
-				conn.setConnectTimeout(req.getConnectTimeout());
-				conn.setReadTimeout(req.getReadTimeout());
+			conn = getConnection(url, method, ctype,req);
+			conn.setConnectTimeout(req.getConnectTimeout());
+			conn.setReadTimeout(req.getReadTimeout());
+			if(!method.equals(METHOD_GET)){
 				out = conn.getOutputStream();
-				byte[] entryBoundaryBytes = ("\r\n--" + boundary + "\r\n").getBytes( req.getCharset());
-
-				// 组装文本请求参数
-				Set<Entry<String, String>> textEntrySet =  req.getTextMap().entrySet();
-				for (Entry<String, String> textEntry : textEntrySet) {
-					strBody.append(textEntry.getKey()+"="+ textEntry.getValue()+"&");
-					byte[] textBytes = getTextEntry(textEntry.getKey(), textEntry.getValue(), req.getCharset());
-					out.write(entryBoundaryBytes);
-					out.write(textBytes);
-				}
-
-				// 组装文件请求参数
-				Set<Entry<String, File>> fileEntrySet = req.getUploadMap().entrySet();
-				for (Entry<String, File> fileEntry : fileEntrySet) {
-					File f=fileEntry.getValue();
-					FileItem fileItem = new FileItem(f);
-					if (fileItem.getContent() == null) {
-						continue;
-					}
-					byte[] fileBytes = getFileEntry(fileEntry.getKey(), fileItem.getFileName(), fileItem.getMimeType(), req.getCharset());
-					out.write(entryBoundaryBytes);
-					out.write(fileBytes);
-					out.write(fileItem.getContent());
-				}
-
-				// 添加请求结束标志
-				byte[] endBoundaryBytes = ("\r\n--" + boundary + "--\r\n").getBytes(req.getCharset());
-				out.write(endBoundaryBytes);
+				out.write(body);
 				out.flush();
-				
-				Map res_headMap=conn.getHeaderFields();
-				rsp = getResponseAsByte(conn);
-				req.setRes_headtMap(res_headMap); //设置返回头
-				
-			} catch (IOException e) {
-				ShowApiLogger.logCommError(e, req.getUrl(), req.getTextMap().get("showapi_app_id"),  strBody.toString());
-				throw e;
 			}
+			Map res_headMap=conn.getHeaderFields();
+			rsp = getResponseAsByte(conn,getLimitReadSize(req));
+			req.setRes_headMap(res_headMap); //设置返回头
+			req.setRes_status(conn.getResponseCode());
 		} finally {
-			if (out != null) {
-				out.close();
-			}
 			if (conn != null) {
 				conn.disconnect();
 			}
@@ -279,73 +168,44 @@ public   class WebUtils {
 		res.setRes_maybe_encoding(getResponseCharset(conn.getContentType()));
 		return res;
 	}
-
-	/**
-	 * 执行带文件上传的HTTP POST请求。
-	 * 
-	 * @param url 请求地址
-	 * @param textParams 文本请求参数
-	 * @param fileParams 文件请求参数
-	 * @return 响应字符串
-	 */
+	
 	public static String doPost(NormalRequest req) throws IOException {
-		ResData res;
-		if (req.getUploadMap() == null || req.getUploadMap().isEmpty()) {
-			res=_doPostAsByte(req);
-			
-		} else {
-			res=_doPostWithFileAsByte(req);
-		}
+		ResData res=_do_execute(req,METHOD_POST);
 		return new String(res.getResData(),res.getRes_maybe_encoding());
 	}
 	
 	public static byte[] doPostAsByte(NormalRequest req) throws IOException {
-		if (req.getUploadMap() == null || req.getUploadMap().isEmpty()) {
-			return _doPostAsByte(req).getResData();
-		} else {
-			return _doPostWithFileAsByte(req).getResData();
-		}
+		ResData res=_do_execute(req,METHOD_POST);
+		return res.getResData();
 	}
 
 	
-	/**
-	 * 执行HTTP GET请求。
-	 * 
-	 * @param url 请求地址
-	 * @param params 请求参数
-	 * @param charset 字符集，如UTF-8, GBK, GB2312
-	 * @return 响应字符串
-	 */
+
 	public static String doGet(NormalRequest req) throws IOException {
-		ResData res=_doGetAsByte(req);
+		ResData res=_do_execute(req,METHOD_GET);
 		return new String(res.getResData(),res.getRes_maybe_encoding());
 	}
 
-	/**
-	 * 执行普通非文件的HTTP POST请求。
-	 * 
-	 * @param url 请求地址
-	 * @param params 请求参数
-	 * @return 响应字符串
-	 */
+
 	public static byte[] doGetAsByte(NormalRequest req) throws IOException {
-		ResData res=_doGetAsByte(req);
+		ResData res=_do_execute(req,METHOD_GET);
 		return res.getResData();
 	}
 	
 
-	public static ByteArrayOutputStream unzip(InputStream in) {
+	public static ByteArrayOutputStream unzip(InputStream in,int limit_size) {
 		ByteArrayOutputStream fout = new ByteArrayOutputStream();
 		try {
 			// 建立gzip解压工作流
 			GZIPInputStream gzin = new GZIPInputStream(in);
 			// 建立解压文件输出流
-
 			byte[] buf = new byte[1024];
 			int num;
-
+            int allNum=0;
 			while ((num = gzin.read(buf, 0, buf.length)) != -1) {
 				fout.write(buf, 0, num);
+                allNum+=num;
+                if(allNum>=limit_size)break;
 			}
 			gzin.close();
 			fout.close();
@@ -355,6 +215,12 @@ public   class WebUtils {
 		}
 		return fout;
 	}
+
+	private static int getLimitReadSize(NormalRequest req){
+        int limit_size=Integer.MAX_VALUE;
+        if(req.getLimitReadSize()>0){limit_size=req.getLimitReadSize();}
+        return limit_size;
+    }
 	private static byte[] getTextEntry(String fieldName, String fieldValue, String charset) throws IOException {
 		StringBuilder entry = new StringBuilder();
 		entry.append("Content-Disposition:form-data; name=\"");
@@ -379,9 +245,38 @@ public   class WebUtils {
 	}
 
 
-	
-	
-	
+	//获取头里的content-type，如果没有，则根据req的请求类型，返回一个content-type
+	private static String getCtype(NormalRequest req,String default_type) {
+		String ret=null;
+		Map params=req.getHeadMap();
+		if (params == null || params.isEmpty()) {
+			return null;
+		}
+		Set<Entry<String, String>> entries = params.entrySet();
+		try {
+			for (Entry<String, String> entry : entries) {
+				String name = entry.getKey().toLowerCase();
+				String value = entry.getValue();
+				// 忽略参数名或参数值为空的参数
+				if(name.equals("content-type")){
+					ret=value;
+					break;
+				}
+			}
+		} catch ( Exception e) {
+			e.printStackTrace();
+		}
+		if(ret==null){//如果在头中找不到定义
+			if(req.getBody()!=null||req.getBodyString()!=null){ //如果强制设置了输入体，则做一个默认content-type
+				ret = "application/octet-stream;charset=" +req.getCharset();
+			}
+		}
+
+		if(ret!=null)return ret;
+		else return default_type;
+	}
+
+
 	private static HttpURLConnection getConnection(URL url, String method, String ctype,NormalRequest req)throws IOException {
 		HttpURLConnection conn;
 		Proxy proxy=req.getProxy();
@@ -408,17 +303,17 @@ public   class WebUtils {
 		}
 		conn.setRequestMethod(method);
 		conn.setDoInput(true);
-		if(method.equals(METHOD_POST)){conn.setDoOutput(true);}
+		conn.setDoOutput(true);
 		conn.setRequestProperty("Accept", "application/json, text/javascript, */*; ");
 		conn.setRequestProperty("User-Agent", "showapi-sdk-java");
 		conn.setRequestProperty("Content-Type", ctype);
 		Map<String, String>  headerMap=req.getHeadMap();
 		if (headerMap != null) {
 			for (Entry<String, String> entry : headerMap.entrySet()) {
-				conn.setRequestProperty(entry.getKey(), entry.getValue());
+				conn.setRequestProperty(entry.getKey(), entry.getValue());  //以头里发来的为优先
 			}
 		}
-		conn.setInstanceFollowRedirects(req.isAllowRedirect());		
+		conn.setInstanceFollowRedirects(req.isAllowRedirect());
 		return conn;
 	}
 
@@ -471,52 +366,39 @@ public   class WebUtils {
 
 		return query.toString();
 	}
-	
-	protected static byte[]  getResponseAsByte(HttpURLConnection conn ) throws IOException   {
+	protected static byte[]  getResponseAsByte(HttpURLConnection conn ,int limit_size) throws IOException {
 		InputStream es = conn.getErrorStream();
 		if (es == null) {
 			if(conn.getContentEncoding()!=null&&conn.getContentEncoding().toLowerCase().equals("gzip")){
-				byte bbb[]=unzip(conn.getInputStream()).toByteArray();
+				byte bbb[]=unzip(conn.getInputStream(),  limit_size).toByteArray();
 				return  bbb;
 			}else{
 				if(conn.getResponseCode()>=400){
 					return new byte[0];
 				}
-				return _readByteFromStream(conn.getInputStream() );
+				return _readByteFromStream(conn.getInputStream(),limit_size );
 			}
 		} else {
-			byte b[]=_readByteFromStream(es);
-			return b;
+			return _readByteFromStream(es ,limit_size);
 		}
 	}
 
-	protected static String getResponseAsString(HttpURLConnection conn ) throws IOException {
+	protected static String getResponseAsString(HttpURLConnection conn,int limit_size ) throws IOException {
 		String charset_res = getResponseCharset(conn.getContentType());
-		InputStream es = conn.getErrorStream();
-		if (es == null) {
-			if(conn.getContentEncoding()!=null&&conn.getContentEncoding().toLowerCase().equals("gzip")){
-				byte bbb[]=unzip(conn.getInputStream()).toByteArray();
-				return  new String(bbb,charset_res);
-			}else{
-				return _readCharString(conn.getInputStream(), charset_res);
-			}
-		} else {
-			String msg = _readCharString(es, charset_res);
-			if (StringUtils.isEmpty(msg)) {
-				throw new IOException(conn.getResponseCode() + ":" + conn.getResponseMessage());
-			} else {
-				throw new IOException(msg);
-			}
-		}
+		byte ret[]=getResponseAsByte(conn,limit_size);
+        return  new String(ret,charset_res);
 	}
 	
-	private static byte[] _readByteFromStream(InputStream stream ) throws IOException  {
+	private static byte[] _readByteFromStream(InputStream stream ,int limit_size) throws IOException  {
 		try {
 			ByteArrayOutputStream out=new ByteArrayOutputStream();
 			byte buf[]=new byte[1024];
 			int read = 0;
+			int allNum=0;
 			while ((read = stream.read(buf)) > 0) {
 				out.write(buf, 0, read);
+				allNum+=read;
+				if(allNum>=limit_size)break;
 			}
 			return out.toByteArray();
 		}  finally {
@@ -526,24 +408,6 @@ public   class WebUtils {
 		}
 	}
 
-	private static String _readCharString(InputStream stream, String charset) throws IOException {
-		try {
-			Reader reader = new InputStreamReader(stream, charset);
-			StringBuilder response = new StringBuilder();
-
-			final char[] buff = new char[1024];
-			int read = 0;
-			while ((read = reader.read(buff)) > 0) {
-				response.append(buff, 0, read);
-			}
-
-			return response.toString();
-		} finally {
-			if (stream != null) {
-				stream.close();
-			}
-		}
-	}
 
 	private static String getResponseCharset(String ctype) {
 		String charset = "utf-8";
@@ -562,92 +426,53 @@ public   class WebUtils {
 				}
 			}
 		}
-
 		return charset;
 	}
- 
+	public static void main(String[] args)  throws  Exception{
+		{
+			byte[] b=  new NormalRequest("http://www.boc.cn/sourcedb/whpj/" )
+					.getAsByte();
+			System.out.println(new String(b,"utf-8"));
 
-	/**
-	 * 使用指定的字符集反编码请求参数值。
-	 * 
-	 * @param value 参数值
-	 * @param charset 字符集
-	 * @return 反编码后的参数值
-	 */
-	public static String decode(String value, String charset) {
-		String result = null;
-		if (!StringUtils.isEmpty(value)) {
-			try {
-				result = URLDecoder.decode(value, charset);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
-		}
-		return result;
-	}
-
-	/**
-	 * 使用指定的字符集编码请求参数值。
-	 * 
-	 * @param value 参数值
-	 * @param charset 字符集
-	 * @return 编码后的参数值
-	 */
-	public static String encode(String value, String charset) {
-		String result = null;
-		if (!StringUtils.isEmpty(value)) {
-			try {
-				result = URLEncoder.encode(value, charset);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
-		}
-		return result;
-	}
-
-	private static Map<String, String> getParamsFromUrl(String url) {
-		Map<String, String> map = null;
-		if (url != null && url.indexOf('?') != -1) {
-			map = splitUrlQuery(url.substring(url.indexOf('?') + 1));
-		}
-		if (map == null) {
-			map = new HashMap<String, String>();
-		}
-		return map;
-	}
-
-	/**
-	 * 从URL中提取所有的参数。
-	 * 
-	 * @param query URL地址
-	 * @return 参数映射
-	 */
-	public static Map<String, String> splitUrlQuery(String query) {
-		Map<String, String> result = new HashMap<String, String>();
-
-		String[] pairs = query.split("&");
-		if (pairs != null && pairs.length > 0) {
-			for (String pair : pairs) {
-				String[] param = pair.split("=", 2);
-				if (param != null && param.length == 2) {
-					result.put(param[0], param[1]);
-				}
-			}
 		}
 
-		return result;
-	}
-	
-	public static void main(String adfas[]) throws  Exception{
-		byte[] b=new NormalRequest("http://localhost:80/")
-		.setCharset("utf-8")
-		.addTextPara("aaa", "bbbb")
-		.setBody("{name:'组长三'}".getBytes())
-		.setBodyString("{name:'组长三aaa'}")
-		.postAsByte();
-		String res=new String(b,"gbk");
-		System.out.println(res);
-		
-	}
 
+//		{
+//			byte[] b=  new NormalRequest("https://www.showapi.com/apiNew/apiListDiv/" )
+//					.addHeadPara("content-type","application/x-www-form-urlencoded;charset=utf-8")
+//					.setBodyString("sortType=i&sortValue=-1&typeId=&srcId=all_src&iframe=false&search=%E7%9F%AD%E4%BF%A1&page=1&freeState=4\n")
+//					.postAsByte();
+//			System.out.println(new String(b,"utf-8"));
+//
+//		}
+
+//		{
+//			String bs=  new NormalRequest("https://www.showapi.com/apiNew/apiListDiv/" )
+//					.addHeadPara("content-type","application/x-www-form-urlencoded;charset=utf-8")
+//					.setBodyString("sortType=i&sortValue=-1&typeId=&srcId=all_src&iframe=false&search=%E7%9F%AD%E4%BF%A1&page=1&freeState=4\n")
+//					.post();
+//			System.out.println(bs);
+//
+//		}
+
+
+//		{
+//		FileItem file = new FileItem("d:/code.txt");
+//		String a=new String(file.getContent());
+//			String str=  new NormalRequest("https://www.showapi.com/apiNew/apiListDiv/" )
+//				.setHeadString(a)
+//				.addTextPara("search","短信")
+//				.addTextPara("sortType","i")
+//				.addTextPara("sortValue","-1")
+//				.addTextPara("typeId","")
+//				.addTextPara("srcId","all_src")
+//				.addTextPara("freeState","4")
+////					.addHeadPara("content-type","application/x-www-form-urlencoded;charset=utf-8")
+////					.setBodyString("sortType=i&sortValue=-1&typeId=&srcId=all_src&iframe=false&search=%E7%9F%AD%E4%BF%A1&page=1&freeState=4\n")
+//					.post();
+//			System.out.println(str);
+//		}
+
+
+	}
 }

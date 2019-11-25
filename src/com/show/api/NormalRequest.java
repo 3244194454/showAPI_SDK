@@ -1,21 +1,15 @@
 package com.show.api;
 
+import com.show.api.util.StringUtils;
+import com.show.api.util.WebUtils;
 import java.io.File;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.util.Calendar;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import com.show.api.util.ShowApiLogger;
-import com.show.api.util.ShowApiUtils;
-import com.show.api.util.StringUtils;
-import com.show.api.util.WebUtils;
+
 
 /**
  * 通用的客户端。
@@ -25,12 +19,13 @@ public class NormalRequest   {
 	protected int readTimeout = 15000;//15秒
 	protected String charset="utf-8";  //出去时的编码
 	protected String charset_out="utf-8";  //读入时的编码，本来读入时编码可以程序自动识别，但有些网站输出头定义的是utf，但实际是gbk，此时就需要定义字段
+    protected int limitReadSize = 0;//默认读取最大数据。<=0为不限，而10*1024*1024为10MB
 	Proxy proxy =null;
 	protected boolean printException = true; //是否输出异常
 	protected boolean allowRedirect = true; //是否允许重定向
 	protected byte[] body=null;//直接提交json数据或二进制流
 	protected String bodyString=null;//直接提交body的字符串，字符集是charset
-	
+	protected int res_status=200;//返回头的状态码
 	static{
 		System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
 	}
@@ -51,6 +46,14 @@ public class NormalRequest   {
 		this.printException = printException;
 		return this;
 	}
+
+    public int  getLimitReadSize( ) {
+        return this.limitReadSize;
+    }
+    public NormalRequest  setLimitReadSize(int size) {
+        this.limitReadSize = size;
+        return this;
+    }
 
 	public NormalRequest setProxy(String proxyIp,int proxyPort) {
 		this.proxy=  new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyIp, proxyPort));
@@ -80,6 +83,15 @@ public class NormalRequest   {
 		return this;
 	}
 
+	public int getRes_status() {
+		return res_status;
+	}
+
+	public NormalRequest setRes_status(int res_status) {
+		this.res_status = res_status;
+		return this;
+	}
+
 	public byte[] getBody() {
 		return body;
 	}
@@ -101,7 +113,7 @@ public class NormalRequest   {
 		return res_headMap;
 	}
 
-	public void setRes_headtMap(Map<String, List<String>> res_headMap) {
+	public void setRes_headMap(Map<String, List<String>> res_headMap) {
 		this.res_headMap = res_headMap;
 	}
 
@@ -151,9 +163,26 @@ public class NormalRequest   {
 		return this;
 	}
 	public NormalRequest setReadTimeout(int readTimeout) {
-		this.readTimeout = readTimeout;
-		return this;
-	}
+        this.readTimeout = readTimeout;
+        return this;
+    }
+
+    //通过字符串设置头部
+    public NormalRequest setHeadString(String headString) {
+	    if(StringUtils.isEmpty(headString))return this;
+        headString=headString.trim();
+        String seg[]=headString.split("\r\n");
+        Map head=getHeadMap();
+        for (String k:seg){
+            String line=k.trim();
+            System.out.println(line);
+            int ind=line.indexOf(":");
+            if(ind==-1)continue;
+            head.put(line.substring(0,ind),line.substring(ind+1));
+        }
+//        System.out.println(getHeadMap());
+        return this;
+    }
 	public NormalRequest setCharset(String charset) {
 		this.charset=charset;
 		return this;
@@ -178,48 +207,6 @@ public class NormalRequest   {
 	}
 	
 	/**
-	 * @param paras : key1=val1&key2=val2
-	 * 添加字符串参数,用&和=组成的多个键值对
-	 */
-	public NormalRequest addParas(String paras) {
-		if(StringUtils.isEmpty(paras)) {
-			return this;
-		}
-		String[] ps = paras.split("&");
-		for(String p : ps ) {
-			if(p.trim().equals("")||!p.contains("=")) {
-				continue;
-			}
-			int index = p.indexOf("=");
-			String key = p.substring(0,index);
-			String val = p.substring(index+1);
-			this.textMap.put(key, val);
-		}
-		return this;
-	}
-	
-	/**
-	 * @param heads : Accept-Encoding: gzip, deflate\r\nHost: www.qichacha.com\r\n
-	 * 添加字符串的头参数,用换行符和冒号组成的多个键值对
-	 */
-	public NormalRequest addHeads(String heads) {
-		if(StringUtils.isEmpty(heads)) {
-			return this;
-		}
-		String[] hs = heads.split("\r\n");
-		for(String h : hs ) {
-			if(h.trim().equals("")||!h.contains(":")) {
-				continue;
-			}
-			int index = h.indexOf(":");
-			String key = h.substring(0,index);
-			String val = h.substring(index+1);
-			this.headMap.put(key,val);
-		}
-		return this;
-	}
-	
-	/**
 	 * 添加post体的上传文件参数
 	 */
 	public NormalRequest addFilePara(String key,File item) {
@@ -231,6 +218,30 @@ public class NormalRequest   {
 	 */
 	public NormalRequest addHeadPara(String key,String value) {
 		this.headMap.put(key,value);
+		return this;
+	}
+
+	/**
+	 * @param heads : Accept-Encoding: gzip, deflate\r\nHost: www.qichacha.com\r\n
+	 * 添加字符串的头参数,用换行符和冒号组成的多个键值对
+	 */
+	public NormalRequest addHeads(String heads) {
+		if(StringUtils.isEmpty(heads)||!heads.contains("\n")) {
+			return this;
+		}
+		String[] hs;
+		if(heads.contains("\r\n")){
+			hs = heads.split("\r\n");
+		} else {
+			hs = heads.split("\n");
+		}
+		for(String h : hs ) {
+			if(h.trim().equals("")||!h.contains(":")) {
+				continue;
+			}
+			String[] kv = h.split(":");
+			this.headMap.put(kv[0].trim(),kv[1].trim());
+		}
 		return this;
 	}
 	
@@ -286,12 +297,12 @@ public class NormalRequest   {
 		}
 		return res;
 	}
-	public static void main(String adfas[]) throws  Exception{ 
-		NormalRequest req =new NormalRequest("http://showwea.market.alicloudapi.com/ip-to-weather")
-		.addTextPara("ip","223.5.5.5")
-		.addHeadPara("Authorization", "APPCODE 3c021fbbf5014163bf0d23bf740d3425" );
-		byte b[]=req.getAsByte();
-		String str=new String(b,"utf-8");
+	
+	public static void main(String adfas[]) throws  Exception{
+		NormalRequest req=new  NormalRequest("http://192.168.218.138:899/admin/tttttt") ;
+		String str=req.get();
+		req.getRes_headMap();
+		System.out.println(req.getRes_status());
 		System.out.println(str);
 	}
 	
