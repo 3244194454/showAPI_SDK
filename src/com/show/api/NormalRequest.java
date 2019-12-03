@@ -236,15 +236,23 @@ public class NormalRequest   {
 		String[] hs;
 		if(heads.contains("\r\n")){
 			hs = heads.split("\r\n");
-		} else {
+		} else if(heads.contains("\n")){
 			hs = heads.split("\n");
+		}else if(heads.contains(":")){
+			String k = heads.substring(0,heads.lastIndexOf(":"));
+			String v = heads.replace(k+":","");
+			this.headMap.put(k.trim(),v.trim());
+			return this;
+		}else{
+			return this;
 		}
 		for(String h : hs ) {
 			if(h.trim().equals("")||!h.contains(":")) {
 				continue;
 			}
-			String[] kv = h.split(":");
-			this.headMap.put(kv[0].trim(),kv[1].trim());
+			String k = h.substring(0,h.lastIndexOf(":"));
+			String v = h.replace(k+":","");
+			this.headMap.put(k.trim(),v.trim());
 		}
 		return this;
 	}
