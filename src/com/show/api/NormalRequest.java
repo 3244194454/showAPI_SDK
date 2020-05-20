@@ -246,7 +246,7 @@ public class NormalRequest   {
 			}
 			if(heads.contains(":")) {
 				String[] kv = heads.split(":");
-				this.headMap.put(pre + kv[0].trim(), kv[1].trim());
+				this.headMap.put(pre + kv[0].trim(), heads.substring(heads.indexOf(":")+1));
 			}
 			return this;
 		}else{
@@ -263,7 +263,7 @@ public class NormalRequest   {
 			}
 			if(h.contains(":")) {
 				String[] kv = h.split(":");
-				this.headMap.put(pre + kv[0].trim(), kv[1].trim());
+				this.headMap.put(pre + kv[0].trim(), h.substring(h.indexOf(":")+1));
 			}
 		}
 		return this;
@@ -320,14 +320,6 @@ public class NormalRequest   {
 			}
 		}
 		return res;
-	}
-	
-	public static void main(String adfas[]) throws  Exception{
-		NormalRequest req=new  NormalRequest("http://192.168.218.138:899/admin/tttttt") ;
-		String str=req.get();
-		req.getRes_headMap();
-		System.out.println(req.getRes_status());
-		System.out.println(str);
 	}
 	
 }
